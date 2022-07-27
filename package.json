@@ -1,5 +1,6 @@
 {
   "name": "test",
+  "homepage": "https://cyber-ikegami.github.io/confirmTableTool_app",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
