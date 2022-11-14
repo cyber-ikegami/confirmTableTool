@@ -5,27 +5,33 @@ class ResourseManager {
 
     constructor(resourse: any) {
         this.resourse = resourse;
-        this.filterCondition = () => {return true};
+        this.filterCondition = () => { return true };
     }
 
-    public setFilterCondition(filterCondition: (record: string[]) => boolean){
+    public setFilterCondition(filterCondition: (record: string[]) => boolean) {
         this.filterCondition = filterCondition;
     }
 
     /** 初期化(常に全部表示(true)する) */
-    public resetFilter(){
-        this.filterCondition = () => {return true};
+    public resetFilter() {
+        this.filterCondition = () => { return true };
     }
 
     /**
      * テーブルの取得
-     * @param target テーブル名
-     * @param columnNumList カラムの番号
+     * @param targetList テーブル名
+     * @param targetName defineListを識別する値
      * @returns テーブル
      */
-     public getRecordList(target: string) {
-        return (this.resourse[target] as string[][]).filter((record) => {
-            return this.filterCondition(record);
+    public getRecordList(targetList: string, targetName?: string) {
+        return (this.resourse[targetList] as string[][]).filter((record) => {
+            if (targetName != undefined) {
+                if (record[0] === targetName) {
+                    return this.filterCondition(record);
+                }
+            } else {
+                return this.filterCondition(record);
+            };
         });
     }
 };

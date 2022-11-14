@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import TbldfBuilder from './contents/tbldfBuilder';
-// import CoddfBuilder from './contents/coddfBuilder';
+import CoddfBuilder from './contents/coddfBuilder';
 import ContentsBuilder from './contents/common/contentsBuilder';
 import TableBuilder from './tableBuilder';
 import ResourseManager from './utils/resourseManager';
 import ColdfBuilder from './contents/coldfBuilder';
-// import CdkanBuilder from './contents/cdkanBuilder';
+import KinouBuilder from './contents/kinouBuilder';
+import KubunBuilder from './contents/kubunBuilder';
+import CdkanBuilder from './contents/cdkanBuilder';
 // import zlib from 'zlib';
 
 const MainFrame = () => {
@@ -17,9 +19,11 @@ const MainFrame = () => {
 
   const contentsList: ContentsBuilder[] = [
     new TbldfBuilder(),
-    new ColdfBuilder()
-    // new CoddfBuilder(),
-    // new CdkanBuilder()
+    new ColdfBuilder(),
+    new KinouBuilder(),
+    new KubunBuilder(),
+    new CoddfBuilder(),
+    new CdkanBuilder()
   ];
 
   // 遷移先タブ名からfocus番号に変換

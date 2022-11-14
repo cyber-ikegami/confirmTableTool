@@ -45,6 +45,7 @@ const TableBuilder = (props: {
 
     // フィルターを作成
     const filterJsxList = props.columnInfoList.map((columnInfo, i) => {
+        // console.log(filterList);
         const cell = filterList[i] != undefined ? filterList[i] : '';
         return (<_FilterCell width={columnInfo.width} key={i}><input type="text" value={cell} onChange={(e) => {
             filterList[i] = e.target.value;
@@ -61,9 +62,9 @@ const TableBuilder = (props: {
                 const isFilterList: boolean[] = record.map((cell, i) => {
                     let cellValue: any = cell;
                     if (props.columnInfoList[i].convertListName != undefined) {
-                        const convertList = props.resourseManager.getRecordList((props.columnInfoList[i].convertListName) as string);
+                        const convertList = props.resourseManager.getRecordList('defineList', (props.columnInfoList[i].convertListName) as string);
                         const afterConvertList = convert(convertList, cell);
-                        cellValue = afterConvertList != undefined ? afterConvertList[1] : '-';
+                        cellValue = afterConvertList != undefined ? afterConvertList[2] : '-';
                     }
                     return String(cellValue).includes(filterList[i] || '');
                 });
@@ -88,12 +89,12 @@ const TableBuilder = (props: {
     // 最大100件表示する
     for (let i = 0; result.length >= 100 ? i < 100 : i < result.length; i++) {
         cellJsxList = result[i].map((cell, j) => {
-            // convertListが存在すれば変換する
+            // convertNameが存在すれば変換する
             let cellValue: any = cell;
             if (props.columnInfoList[j].convertListName != undefined) {
-                const convertList = props.resourseManager.getRecordList((props.columnInfoList[j].convertListName) as string);
+                const convertList = props.resourseManager.getRecordList('defineList', (props.columnInfoList[j].convertListName) as string);
                 const afterConvertList = convert(convertList, cell);
-                cellValue = afterConvertList != undefined ? afterConvertList[1] : '-';
+                cellValue = afterConvertList != undefined ? afterConvertList[2] : '-';
             }
             return (
                 <_BodyCell width={props.columnInfoList[j].width} isSelect={focus === i} key={j} onClick={() => {
@@ -108,7 +109,7 @@ const TableBuilder = (props: {
     // フッターを作成
     const fotterAreaJsxList = props.selectContents.functionList().map((fanc, i) => {
         return < _Button key={i} onClick={() => {
-            props.resourseManager.setFilterCondition((destRecord: string[]) => fanc.filterCondition(recordList[focus], destRecord));
+            props.resourseManager.setFilterCondition((destRecord: string[]) => fanc.filterCondition(result[focus], destRecord));
             props.getFocusNoFromTabName(fanc.destTabName);
         }}> {fanc.labelName}</_Button>;
     });
@@ -135,8 +136,8 @@ const TableBuilder = (props: {
 // 変換
 const convert = (convertList: string[][], cell: string) => {
     return convertList.find(value => {
-        if (value[0] === cell) {
-            return value[1];
+        if (value[1] === cell) {
+            return value[2];
         }
     });
 };
