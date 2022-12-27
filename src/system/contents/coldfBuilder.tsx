@@ -21,7 +21,11 @@ class ColdfBuilder implements ContentsBuilder {
         }
     };
     functionList(): ContentsUtil.FunctionInfo[] {
-        return [];
+        return [
+            {
+                labelName: '戻る', destTabName: DefineUtil.TBLDF_TAB_NAME, filterCondition: () => { return true }
+            }
+        ];;
     };
 };
 

@@ -13,7 +13,7 @@ class TbldfBuilder implements ContentsBuilder {
                 { columnName: 'テーブルID', num: 0, width: 80 },
                 { columnName: 'テーブル名', num: 1, width: 330 },
                 { columnName: 'グループ', num: 2, width: 150, convertListName: 'tblgr' },
-                { columnName: '概要', num: 3, width: 400 },
+                { columnName: '概要', num: 3, width: 500 },
                 { columnName: 'サブシステム', num: 4, width: 180, convertListName: 'tblsb' },
                 { columnName: '連番', num: 5, width: 35 }
             ]

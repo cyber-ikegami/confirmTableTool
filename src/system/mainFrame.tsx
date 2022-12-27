@@ -9,7 +9,24 @@ import ColdfBuilder from './contents/coldfBuilder';
 import KinouBuilder from './contents/kinouBuilder';
 import KubunBuilder from './contents/kubunBuilder';
 import CdkanBuilder from './contents/cdkanBuilder';
-// import zlib from 'zlib';
+import zlib from "zlib";
+import KnprpBuilder from './contents/knprpBuilder';
+import UnprpBuilder from './contents/unprpBuilder';
+
+/** キャッシュ **/
+export type CashInfo = {
+  // 検索欄の情報
+  filterList: string[];
+  // 選択されている箇所
+  focus: number;
+  // スクロール量(縦)
+  scrollTop: number;
+  // スクロール量(縦)
+  scrollLeft: number;
+};
+
+// 読み込んだファイル名
+let fileName: String = '';
 
 const MainFrame = () => {
   // 選択中のタブ
@@ -17,22 +34,25 @@ const MainFrame = () => {
   // 取得したファイルの中身
   const [resourseManager, setResourseManager] = useState<null | ResourseManager>(null);
 
+  // 関連カラムから遷移した場合に保持するキャッシュ（フィルターリスト、フォーカス、スクロール量）
+  const [cash, setCash] = useState<CashInfo | null>(null);
+
   const contentsList: ContentsBuilder[] = [
     new TbldfBuilder(),
     new ColdfBuilder(),
     new KinouBuilder(),
     new KubunBuilder(),
     new CoddfBuilder(),
-    new CdkanBuilder()
+    new CdkanBuilder(),
+    new UnprpBuilder(),
+    new KnprpBuilder()
   ];
 
   // 遷移先タブ名からfocus番号に変換
   const getFocusNoFromTabName = (tabName: string): number => {
     let focusNo = -1;
     contentsList.forEach((v, i) => {
-      if (v.tabName() === tabName) {
-        focusNo = i;
-      }
+      if (v.tabName() === tabName) focusNo = i;
     })
     setFocus(focusNo);
     return focusNo;
@@ -44,6 +64,7 @@ const MainFrame = () => {
       <_Tab isActive={focus === i} key={i} onClick={() => {
         (resourseManager as ResourseManager).resetFilter();
         setFocus(i);
+        setCash(null);
       }}>{value.tabName()}</_Tab>
     );
   });
@@ -57,11 +78,14 @@ const MainFrame = () => {
     const columnInfoList = contentsList[focus].getOutputAreaProps().columnInfoList;
     return (
       <TableBuilder
+        fileName={fileName}
         resourseManager={resourseManager as ResourseManager}
         target={target}
         columnInfoList={columnInfoList}
         selectContents={contentsList[focus]}
         getFocusNoFromTabName={getFocusNoFromTabName}
+        cash={cash}
+        setCash={setCash}
       ></TableBuilder>
     );
   }, [focus]);
@@ -76,11 +100,9 @@ const MainFrame = () => {
         }}>ファイルを選択</_SelectFileButton>
       </_SelectFileForm>
 
-      <_TreeFrame></_TreeFrame>
-      <_ContentsFrame>
-        <_Header>{headerJsxList}</_Header>
-        <_OutputArea>{outputAreaJsx}</_OutputArea>
-      </_ContentsFrame>
+      <_TabFrame>{headerJsxList}</_TabFrame>
+      <_ContentsFrame>{outputAreaJsx}</_ContentsFrame>
+      <_FooterFrame>{'　Copyright ikegami v.1.1(2022/12/27)　'}</_FooterFrame>
     </_Frame>
   );
 };
@@ -91,24 +113,21 @@ export default MainFrame;
 const getFileText = async () => {
   const [fileHandle] = await window.showOpenFilePicker();
   const file = await fileHandle.getFile();
+  fileName = file.name;
   const fileContents = await file.text();
-  return JSON.parse(fileContents);
+  return JSON.parse(unZip(fileContents));
 };
 
-// 解凍
-// const getDecodeText = (value: string) => {
-//   const buffer = Buffer.from(value, 'base64');
-//   const result = zlib.unzipSync(buffer);
-//   const str = decodeURIComponent(result.toString());
-//   return str;
-// }
-
-// 圧縮
-// const getEncodeText = (value: string) => {
-//   const content = encodeURIComponent(JSON.stringify(value));
-//   const result2 = zlib.gzipSync(content);
-//   const value2 = result2.toString('base64');
-// }
+// 圧縮された文字列を複号する
+export const unZip = (val: string) => {
+  // base64 => Bufferに変換
+  const buffer = Buffer.from(val, 'base64')
+  // 復号化
+  const result = zlib.unzipSync(buffer)
+  // デコード
+  const str = decodeURIComponent(result.toString())
+  return str;
+}
 
 // ファイル選択前エリア
 const _SelectFileForm = styled.div<{
@@ -147,28 +166,12 @@ const _Frame = styled.div`
   display: inline-block;
 `;
 
-// ツリーエリア
-const _TreeFrame = styled.div`
-  height: 100%;
-  width: 200px; 
+// タブエリア
+const _TabFrame = styled.div`
+  height: calc(100% - 15px);
+  width: 110px; 
   display: inline-block;
   background-color: #f8faba;
-`;
-
-// コンテンツエリア
-const _ContentsFrame = styled.div`
-  height: 100%;
-  width: calc(100% - 200px);  
-  display: inline-block;
-  vertical-align: top;
-`;
-
-// ヘッダー
-const _Header = styled.div`
-  height: 50px;
-  width: 100%;
-  background-color: #ffe1bb;
-  display: inline-block;
 `;
 
 // タブ
@@ -178,21 +181,34 @@ const _Tab = styled.div<{
   cursor: pointer;
   background-color: ${props => props.isActive ? '#ffad42' : '#ffc06d'};
   display: inline-block;
-  font-size: 25px;
+  font-size: 13px;
   text-align: center;
   width: 100px;
   height: 40px;
+  line-height: 40px;
   margin-left: 5px;
   margin-top: 5px;
+  font-weight: bold;
 `;
 
-// 出力エリア
-const _OutputArea = styled.div`
-  height: calc(100% - 50px);
-  width: 100%;
+// コンテンツエリア
+const _ContentsFrame = styled.div`
+  height: calc(100% - 15px);
+  width: calc(100% - 110px);
   background-color: #ffe18d;
+  vertical-align: top;
   display: inline-block;
   padding-left: 5px;
   padding-top: 5px;
   box-sizing: border-box;
 `;
+
+// フッターエリア
+const _FooterFrame = styled.div`
+  height: 15px;
+  width: 100%;
+  background-color: #fff78c;
+  font-size: 10px;
+  display: inline-block;
+  text-align: right;
+`

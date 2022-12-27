@@ -1,22 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import ContentsBuilder from "./contents/common/contentsBuilder";
+import { CashInfo } from "./mainFrame";
 import ContentsUtil from "./utils/contentsUtil";
 import ResourseManager from "./utils/resourseManager";
 
 const TableBuilder = (props: {
+    fileName: String;
     resourseManager: ResourseManager;
     target: string;
     columnInfoList: ContentsUtil.ColumnInfo[];
     selectContents: ContentsBuilder;
     getFocusNoFromTabName: (tabName: string) => number;
+    cash: CashInfo | null;
+    setCash: React.Dispatch<React.SetStateAction<CashInfo | null>>;
 }) => {
+
     const headerRef = useRef<null | HTMLDivElement>(null);
     const bodyRef = useRef<null | HTMLDivElement>(null);
 
     // 選択中のレコード
     const [focus, setFocus] = useState<number>(-1);
+    // 検索エリアの値
     const [filterList, setFilterList] = useState<string[]>([]);
+    // 戻るボタンを押下したフラグ
+    const [returnFlag, setReturnFlag] = useState<boolean>(false);
 
     // レコード
     const recordList = props.resourseManager.getRecordList(props.target);
@@ -30,11 +38,23 @@ const TableBuilder = (props: {
 
     // 選択タブ変更時の初期化
     useEffect(() => {
-        setFocus(-1);
-        setFilterList([]);
-        if (bodyRef.current != null) {
-            bodyRef.current.scrollTop = 0;
-            bodyRef.current.scrollLeft = 0;
+        if (props.cash != null && returnFlag) {
+            // 戻るボタンから遷移したとき
+            setFocus(props.cash.focus);
+            setFilterList(props.cash.filterList);
+            setReturnFlag(false);
+            if (bodyRef.current != null) {
+                bodyRef.current.scrollTop = props.cash.scrollTop;
+                bodyRef.current.scrollLeft = props.cash.scrollLeft;
+            }
+        } else {
+            // 戻るボタン以外から遷移したとき
+            setFocus(-1);
+            setFilterList([]);
+            if (bodyRef.current != null) {
+                bodyRef.current.scrollTop = 0;
+                bodyRef.current.scrollLeft = 0;
+            }
         }
     }, [props.target]);
 
@@ -45,16 +65,16 @@ const TableBuilder = (props: {
 
     // フィルターを作成
     const filterJsxList = props.columnInfoList.map((columnInfo, i) => {
-        // console.log(filterList);
         const cell = filterList[i] != undefined ? filterList[i] : '';
         return (<_FilterCell width={columnInfo.width} key={i}><input type="text" value={cell} onChange={(e) => {
+            if (focus != -1) { setFocus(-1) };
             filterList[i] = e.target.value;
             setFilterList(filterList.slice());
         }}></input></_FilterCell>);
     });
 
     // テーブル(body)を作成
-    const result: any[][] = useMemo(() => {
+    const result: string[][] = useMemo(() => {
         let tableList: any[][] = [];
         if (filterList.length !== 0) {
             recordList.forEach((record) => {
@@ -71,9 +91,7 @@ const TableBuilder = (props: {
 
                 // ↑ isFilterListにfalseが存在する列を表示しない
                 if (!(isFilterList.includes(false))) {
-                    const resultCellList = record.map((cell) => {
-                        return cell;
-                    })
+                    const resultCellList = record.map((cell) => { return cell })
                     tableList.push(resultCellList);
                 };
             })
@@ -108,21 +126,69 @@ const TableBuilder = (props: {
 
     // フッターを作成
     const fotterAreaJsxList = props.selectContents.functionList().map((fanc, i) => {
-        return < _Button key={i} onClick={() => {
-            props.resourseManager.setFilterCondition((destRecord: string[]) => fanc.filterCondition(result[focus], destRecord));
-            props.getFocusNoFromTabName(fanc.destTabName);
-        }}> {fanc.labelName}</_Button>;
+        if (fanc.labelName === '戻る') {
+            return < _Button onKeyDown={() => console.log('!!')} isEnable={true} isDisplay={props.cash != null} key={i} onClick={() => {
+                props.resourseManager.resetFilter();
+                props.getFocusNoFromTabName(fanc.destTabName);
+                setReturnFlag(true);
+            }}> {fanc.labelName} </_Button>;
+        } else {
+            return < _Button isEnable={focus !== -1} isDisplay={true} key={i} onClick={() => {
+                if (bodyRef.current != null && headerRef.current != null) {
+                    props.setCash({ filterList: filterList, focus: focus, scrollTop: bodyRef.current.scrollTop, scrollLeft: bodyRef.current.scrollLeft });
+                }
+                props.resourseManager.setFilterCondition((destRecord: string[]) => fanc.filterCondition(result[focus], destRecord));
+                props.getFocusNoFromTabName(fanc.destTabName);
+            }}> {fanc.labelName} </_Button>;
+        }
     });
+
+    // 矢印キー押下時の動作
+    const keyEvent = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        switch (e.key) {
+            case 'ArrowUp':
+                if (focus > 0) setFocus(focus - 1);
+                e.preventDefault();
+                break;
+            case 'ArrowDown':
+                if (focus != -1 && focus < dispCount - 1) setFocus(focus + 1);
+                e.preventDefault();
+                break;
+            case 'ArrowLeft':
+                props.selectContents.functionList().forEach((fanc) => {
+                    if (fanc.labelName === '戻る' && props.cash != null) {
+                        props.resourseManager.resetFilter();
+                        props.getFocusNoFromTabName(fanc.destTabName);
+                        setReturnFlag(true);
+                    }
+                })
+                e.preventDefault();
+                break;
+            case 'ArrowRight':
+                props.selectContents.functionList().forEach((fanc) => {
+                    if (fanc.labelName !== '戻る') {
+                        if (bodyRef.current != null && headerRef.current != null) {
+                            props.setCash({ filterList: filterList, focus: focus, scrollTop: bodyRef.current.scrollTop, scrollLeft: bodyRef.current.scrollLeft });
+                        }
+                        props.resourseManager.setFilterCondition((destRecord: string[]) => fanc.filterCondition(result[focus], destRecord));
+                        props.getFocusNoFromTabName(fanc.destTabName);
+                    }
+                })
+                e.preventDefault();
+                break;
+        }
+    };
 
     return (
         <_Frame>
             <_ContentsFrame>
+                <_OutputCountArea isFileName={true}>{props.fileName}</_OutputCountArea>
                 <_OutputCountArea>{`母数：${parameter}件　フィルター：${filterCount}件　表示：${dispCount}件`}</_OutputCountArea>
                 <_HeaderFrame ref={headerRef}>
                     <_Header>{headerJsxList}</_Header>
                     <_Header>{filterJsxList}</_Header>
                 </_HeaderFrame>
-                <_Body ref={bodyRef} onScroll={() => {
+                <_Body onKeyDown={e => keyEvent(e)} tabIndex={0} ref={bodyRef} onScroll={() => {
                     if (bodyRef.current != null && headerRef.current != null) {
                         headerRef.current.scrollLeft = bodyRef.current.scrollLeft;
                     }
@@ -136,9 +202,7 @@ const TableBuilder = (props: {
 // 変換
 const convert = (convertList: string[][], cell: string) => {
     return convertList.find(value => {
-        if (value[1] === cell) {
-            return value[2];
-        }
+        if (value[1] === cell) { return value[2] }
     });
 };
 
@@ -169,12 +233,12 @@ const _Header = styled.div`
     width: 100%;
     display: block;
     white-space: nowrap;
-    
 `;
 
 // ボディ
 const _Body = styled.div`
-    height: calc(100% - 75px);
+    outline:none;
+    height: calc(100% - 100px);
     width: 100%;
     background-color: #f8faba;
     display: inline-block;
@@ -182,8 +246,12 @@ const _Body = styled.div`
     white-space: nowrap;
 `;
 
-// 出力件数エリア
-const _OutputCountArea = styled.div`
+// ファイル名、出力件数エリア
+const _OutputCountArea = styled.div<{
+    isFileName?: boolean
+}>`
+    font-weight: ${props => props.isFileName ? 'bold' : ''};
+    color: ${props => props.isFileName ? '#d82f00' : ''};
     height: 25px;
     width: 100%;
     font-size: 15px;
@@ -236,9 +304,21 @@ const _Fotter = styled.div`
 `;
 
 // 表示ボタン
-const _Button = styled.div`
+const _Button = styled.div<{
+    isEnable: boolean;
+    isDisplay: boolean;
+}>`
   background-color: #eef5ff;
-  display: inline-block;
+
+  // 非活性処理
+  ${props => props.isEnable ? '' : css`
+    pointer-events: none;
+    background-color: #acb2ba;
+  `}
+
+  // 非表示処理
+  display: ${props => props.isDisplay ? 'inline-block' : 'none'};
+
   font-size: 15px;
   width: 100px;
   height: calc(100% - 10px);

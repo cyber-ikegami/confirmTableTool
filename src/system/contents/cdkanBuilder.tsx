@@ -1,6 +1,6 @@
 import ContentsUtil from "../utils/contentsUtil";
-import DefineUtil from "../utils/defineUtil";
 import ContentsBuilder from "./common/contentsBuilder";
+import DefineUtil from "../utils/defineUtil";
 
 class CdkanBuilder implements ContentsBuilder {
     tabName(): string {
@@ -18,7 +18,9 @@ class CdkanBuilder implements ContentsBuilder {
         }
     };
     functionList(): ContentsUtil.FunctionInfo[] {
-        return[];
+        return [{
+            labelName: '戻る', destTabName: DefineUtil.CODDF_TAB_NAME, filterCondition: () => { return true }
+        }];
     };
 };
 
